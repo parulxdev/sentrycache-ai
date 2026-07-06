@@ -1,0 +1,142 @@
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============ Virtual Environment ============
+venv/
+ENV/
+env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ============ IDE / Editor ============
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ============ Database Files ============
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ============ Environment Variables ============
+.env
+.env.local
+.env.*.local
+*.env
+
+# ============ Logs ============
+*.log
+logs/
+*.log.*
+
+# ============ Testing ============
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.cover
+*.py,cover
+.hypothesis/
+
+# ============ Jupyter Notebooks ============
+.ipynb_checkpoints/
+
+# ============ mypy ============
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============ Pyre ============
+.pyre/
+
+# ============ pytype ============
+.pytype/
+
+# ============ Cython ============
+cython_debug/
+
+# ============ OS Files ============
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+ehthumbs_vista.db
+
+# ============ Project Specific ============
+sentry_cache.db
+sentry_cache.db-journal
+*.cache
+*.pkl
+*.joblib
+*.h5
+*.keras
+
+# ============ Temporary Files ============
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# ============ Docker ============
+.dockerignore
+docker-compose.override.yml
+*.dockerfile
+!Dockerfile
+
+# ============ Backups ============
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.gz
+*.bz2
+
+# ============ Secrets ============
+*.pem
+*.key
+*.crt
+*.p12
+.secrets/
+secrets/
+*.secret
