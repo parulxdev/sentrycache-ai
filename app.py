@@ -260,9 +260,18 @@ class EmbeddingModel:
     """Wrapper for sentence-transformers embedding model"""
     
     def __init__(self):
-        logger.info(" Loading embedding model...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        logger.info(" Model loaded!")
+        logger.info(" Loading embedding model locally")
+        try:
+            self.model = SentenceTransformer(
+                'all-MiniLM-L6-v2',
+                local_files_only=True
+            )
+            logger.info(" Model loaded from local cache")
+        except Exception as e:
+            logger.warning(f"Local model not found: {e}")
+            logger.info(" Downloading model once...")
+            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            logger.info(" Model downloaded and cached")
     
     def encode(self, text: str) -> np.ndarray:
         """Encode text to embedding vector"""
@@ -352,7 +361,7 @@ app = FastAPI(
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
     """Main endpoint with semantic caching"""
-    
+    start_time = time.time()
     try:
         # Parse request
         body = await request.json()
@@ -370,10 +379,18 @@ async def chat_completions(request: Request):
         logger.info(f" Query: {query[:50]}...")
         
         # Check cache
+        cache_start = time.time()
         cached = cache.search(query)
         
+        cache_time = (time.time() - cache_start) * 1000
+        
         if cached:
+            logger.info(f" Cache lookup took {cache_time:.2f}ms")
             # CACHE HIT!
+            total_time = (time.time() - start_time) * 1000
+            logger.info(f"Total request time: {total_time:.2f}ms")
+            
+
             return {
                 "choices": [{
                     "message": {
@@ -389,24 +406,59 @@ async def chat_completions(request: Request):
                 "cache_stats": cache.get_stats()
             }
         
-        # CACHE MISS - Call LLM
-        logger.info(" Calling OpenAI...")
+        # CACHE MISS - Generate response (with fallback)
+        logger.info(" Generating response...")
         
-        if not OPENAI_API_KEY:
-            raise ValueError("OpenAI API key not configured")
+        answer = None
+        tokens = 0
+        used_mock = False
         
+        # Try OpenAI first
+        try:
+            if OPENAI_API_KEY and OPENAI_API_KEY != "your_openai_api_key_here":
+                client = openai.OpenAI(api_key=OPENAI_API_KEY)
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": query}],
+                    temperature=0.7
+                )
+                answer = response.choices[0].message.content
+                tokens = response.usage.total_tokens
+                logger.info(" Using OpenAI")
+            else:
+                raise ValueError("OpenAI API key not configured")
+                
+        except Exception as e:
+            logger.warning(f"OpenAI failed: {e}")
+            logger.info(" Falling back to mock responses")
+            used_mock = True
+            
+            # Mock responses (fallback)
+            mock_responses = {
+                "machine learning": "Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.",
+                "ml": "Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience.",
+                "ai": "Artificial Intelligence (AI) is the simulation of human intelligence in machines that are programmed to think and learn.",
+                "python": "Python is a high-level, interpreted programming language known for its simplicity and readability.",
+                "rag": "RAG (Retrieval-Augmented Generation) is a technique that combines information retrieval with language generation for more accurate responses.",
+                "llm": "LLM (Large Language Model) is a type of AI model trained on vast amounts of text data to understand and generate human-like language.",
+                "cache": "Semantic caching stores responses based on meaning, so similar questions get the same answer without calling the API again.",
+                "hello": "Hello! I am SentryCache AI. I can help you with questions about AI, machine learning, Python, and more.",
+                "default": "I am a mock response. To get real AI responses, add your OpenAI API key to the .env file. For now, I am demonstrating the caching system."
+            }
+            
+            # Find matching response
+            answer = None
+            for key, text in mock_responses.items():
+                if key in query.lower():
+                    answer = text
+                    break
+            
+            if not answer:
+                answer = mock_responses["default"]
+            
+            tokens = len(answer.split())
         
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(  # ← NEW syntax
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": query}],
-            temperature=0.7
-        )
-        
-        answer = response.choices[0].message.content
-        tokens = response.usage.total_tokens
-        
-        # Save to cache
+        # Save to cache (works with both real and mock)
         cache.save(query, answer, tokens=tokens)
         
         return {
@@ -418,7 +470,8 @@ async def chat_completions(request: Request):
             }],
             "usage": {
                 "total_tokens": tokens,
-                "cache_hit": False
+                "cache_hit": False,
+                "used_mock": used_mock
             },
             "cache_stats": cache.get_stats()
         }
@@ -479,10 +532,10 @@ async def enable_cache():
 
 if __name__ == "__main__":
     print(f"""
-╔═══════════════════════════════════════════════════════════╗
-║   SentryCache AI - SQLite Version                      ║
-║  Semantic caching with SQLite persistence               ║
-╚═══════════════════════════════════════════════════════════╝
+
+   SentryCache AI             
+        
+
 
 Database: {DB_PATH}
 Proxy: http://{PROXY_HOST}:{PROXY_PORT}
